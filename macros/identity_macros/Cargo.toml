@@ -1,0 +1,11 @@
+[package]
+name = "identity_macros"
+version = "0.1.0"
+description = "Defines derive macros for Identity types"
+edition = "2021"
+
+[lib]
+proc_macro = true
+
+[dependencies]
+syn = "1.0.90"
