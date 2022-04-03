@@ -7,10 +7,6 @@ use error::IdentityError;
 use event::update_event;
 use identity::Identity;
 
-use std::convert::TryInto;
-
-use crate::identity::types::Updatable;
-
 declare_id!("GxyJLSDuC7BkeorKoMg87uhaXvuaUxDjDKT7iQWCbxXJ");
 
 #[program]
@@ -29,14 +25,14 @@ pub mod program_identity {
         birth: i64,
         mail: Option<String>,
     ) -> Result<()> {
-        ctx.accounts.identity.set_inner(Identity::new(
+        ctx.accounts.identity.set_inner(Identity::try_new(
             &ctx,
-            first_name.parse()?,
-            last_name.parse()?,
-            username.parse()?,
+            &first_name,
+            &last_name,
+            &username,
             birth,
-            mail.try_into()?,
-        ));
+            mail,
+        )?);
 
         // Emet un `Event` signifiant qu'une nouvelle identité est crée
         emit!(event::IdentityCreated {
@@ -50,45 +46,45 @@ pub mod program_identity {
 
     /// Permet à un utilisateur de mettre à jour son prénom
     pub fn update_name(ctx: Context<UpdateIdentity>, first_name: String) -> Result<()> {
-        let old_data = ctx.accounts.identity.first_name.clone();
-        ctx.accounts.identity.first_name.update(first_name.parse()?);
-
         emit!(update_event::FirstNameUpdated {
             pubkey: ctx.accounts.user.key(),
-            old_data: old_data.to_string(),
-            new_data: first_name,
+            old_data: ctx.accounts.identity.first_name.clone(),
+            new_data: first_name.clone(),
             timestamp: Clock::get().unwrap().unix_timestamp
         });
+
+        ctx.accounts.identity.first_name = first_name;
 
         Ok(())
     }
 
     /// Permet à un utilisateur de mettre à jour son pseudonyme
     pub fn update_username(ctx: Context<UpdateIdentity>, username: String) -> Result<()> {
-        let old_data = ctx.accounts.identity.username.clone();
-        ctx.accounts.identity.username.update(username.parse()?);
-
         emit!(update_event::UsernameUpdated {
             pubkey: ctx.accounts.user.key(),
-            old_data: old_data.to_string(),
-            new_data: username,
+            old_data: ctx.accounts.identity.username.clone(),
+            new_data: username.clone(),
             timestamp: Clock::get().unwrap().unix_timestamp
         });
+
+        ctx.accounts.identity.username = username;
 
         Ok(())
     }
 
     /// Permet à un utilisateur de mettre à jour ou supprimer son mail
-    pub fn update_mail(ctx: Context<UpdateIdentity>, mail: Option<String>) -> anchor_lang::Result<()> {
-        let old_data = ctx.accounts.identity.mail.clone();
-        ctx.accounts.identity.mail.update(mail.clone().try_into()?);
-
+    pub fn update_mail(
+        ctx: Context<UpdateIdentity>,
+        mail: Option<String>,
+    ) -> anchor_lang::Result<()> {
         emit!(update_event::MailUpdated {
             pubkey: ctx.accounts.user.key(),
-            old_data: old_data.try_into().unwrap(),
-            new_data: mail,
+            old_data: ctx.accounts.identity.mail.clone(),
+            new_data: mail.clone(),
             timestamp: Clock::get().unwrap().unix_timestamp
         });
+
+        ctx.accounts.identity.mail = mail;
 
         Ok(())
     }
@@ -122,7 +118,7 @@ pub struct CreateIdentity<'info> {
         seeds = [&Identity::BUMP_STRING_STORE, user.key().as_ref()], bump
     )]
     pub identity: Account<'info, Identity>,
-    pub system_program: SystemAccount<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -144,9 +140,4 @@ pub struct CloseIdentity<'info> {
         seeds = [&Identity::BUMP_STRING_STORE, user.key().as_ref()], bump = identity.bump
     )]
     pub identity: Account<'info, Identity>,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
-pub struct FirstNameTest{
-    pub test: String
 }

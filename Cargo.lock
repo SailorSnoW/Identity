@@ -575,14 +575,6 @@ name = "identity"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
- "identity_macros",
-]
-
-[[package]]
-name = "identity_macros"
-version = "0.1.0"
-dependencies = [
- "syn",
 ]
 
 [[package]]

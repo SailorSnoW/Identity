@@ -17,4 +17,3 @@ default = []
 
 [dependencies]
 anchor-lang = "0.23.0"
-identity_macros = { path = "../../macros/identity_macros" }
